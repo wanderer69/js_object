@@ -59,6 +59,7 @@ func (at AppT) ButtonClickCallBack(this js.Value, args []js.Value, jso *object.J
 	text1 := at.Jsod["text_1"]
 	if text1 != nil {
 		v := text1.GetValue()
+		fmt.Printf("-> %v %v %v\r\n", v, len(v), v == "33333")
 		if v == "33333" {
 			text1.SetValue("22222")
 		} else {
@@ -169,11 +170,13 @@ func main() {
 	oll := [][]string{ol1, ol2}
 	table_1.SetTable(at, hl, oll)
 
-	bb_cb := func(this js.Value, args []js.Value) interface{} {
-		text_1.SetValue("333333")
-		return nil
+	if false {
+		bb_cb := func(this js.Value, args []js.Value) interface{} {
+			text_1.SetValue("33333")
+			return nil
+		}
+		button_1.SetCallBack("click", bb_cb)
 	}
-	button_1.SetCallBack("click", bb_cb)
 
 	<-done
 }
