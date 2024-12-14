@@ -1,0 +1,192 @@
+<!doctype html>
+<html>  
+    <head>
+        <meta charset="utf-8"/>
+        <link href="https://fonts.googleapis.com/css?family=Roboto&display=swap" rel="stylesheet" />
+        <script src="wasm_exec.js"></script>
+        <script>
+          if (!WebAssembly.instantiateStreaming) { // polyfill
+            WebAssembly.instantiateStreaming = async (resp, importObject) => {
+              const source = await (await resp).arrayBuffer();
+              return await WebAssembly.instantiate(source, importObject);
+            };
+          }
+
+          const go = new Go();
+          let mod, inst;
+          WebAssembly.instantiateStreaming(fetch("json_3.wasm"), go.importObject).then((result) => {
+            mod = result.module;
+            inst = result.instance;
+            run();
+          }).catch((err) => {
+            console.error(err);
+          });
+
+          async function run() {
+            console.clear();
+            await go.run(inst);
+            inst = await WebAssembly.instantiate(mod, go.importObject); // reset instance
+          }
+        </script>
+  <style>
+    /* */
+    .custom-select-wrapper {
+      position: relative;
+      user-select: none;
+      width: 100%;
+    }
+    .custom-select {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      /*
+      border-width: 0 2px 0 2px;
+      border-style: solid;
+      border-color: #394a6d;
+      */
+    }    
+    .custom-options {
+      position: absolute;
+      /*display: block;*/
+      top: 100%;
+      left: 0;
+      right: 0;
+      border: 2px solid #394a6d;
+      /*border-top: 2; */
+      background: #fff;
+      transition: all 0.5s;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      z-index: 2;
+      border-radius: 10px;
+      overflow-y: scroll;
+    }  
+    .custom-option {
+      position: relative;
+      /*display: block;*/
+      padding: 0 20px 0 20px;
+      /*
+      font-size: 22px;
+      font-weight: 300;
+      */
+      color: #3b3b3b;
+      line-height: 20px;
+      cursor: pointer;
+      transition: all 0.5s;
+    }
+    .custom-option.selected {
+      color: #ffffff;
+      background-color: #305c91;
+    }
+    .custom-select.open .custom-options {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: all;
+    }
+  </style>
+    </head>
+    <body>
+    <div id="DocConstructor" class="DocConstructor" style="display:none">
+{
+  "doc_constructors": [
+    {
+      "object": {
+        "object_id": "block_1",
+        "object_type": "block",
+        "object_extender": {
+          "change_callback": "BlockChangeCallBack",
+          "click_callback": "BlockClickCallBack"
+        }
+      }
+    },
+    {
+      "object": {
+        "object_id": "text_1",
+        "object_type": "text",
+        "object_extender": {
+          "text_by_default": "text_by_default",
+          "change_callback": "func_name_change_text1_callback1"
+        }
+      }
+    },
+    {
+      "object": {
+        "object_id": "button_1",
+        "object_type": "button",
+        "object_extender": {
+          "button_name": "button_name_1",
+          "click_callback": "ButtonClickCallBack"
+        }
+      }
+    },
+    {
+      "object": {
+        "object_id": "list_1",
+        "object_type": "list",
+        "object_extender": {
+          "list_items": [
+            {
+              "id": "Item1",
+              "data": "data item1"
+            },
+            {
+              "id": "Item2",
+              "data": "data item2"
+            },
+            {
+              "id": "Item3",
+              "data": "data item3"
+            }
+          ],
+          "change_callback": "ListChangeCallBack"
+        }
+      }
+    },
+    {
+      "object": {
+        "object_id": "selector_1",
+        "object_type": "selector",
+        "object_extender": {
+          "list_items": [
+            {
+              "id": "Item1",
+              "data": "data item1"
+            },
+            {
+              "id": "Item2",
+              "data": "data item2"
+            },
+            {
+              "id": "Item3",
+              "data": "data item3"
+            }
+          ],
+          "change_callback": "SelectorChangeCallBack"
+        }
+      }
+    }
+  ]
+}
+</div>
+    <div id="block_1">
+
+    </div>
+    <div id="text_1_">
+    Пароль <input id="text_1" type="text" size="40">
+    </div>
+    <div id="button_1_">
+    <button id="button_1">button_name_1</button>
+    </div>
+    <div class="custom-select-wrapper">
+      <div class="custom-select">
+        <div class="custom-options" id="list_1">
+        </div>
+      </div>
+    </div> 
+    <div id="selector_1_">
+            <select id="selector_1" name="words" multiple="multiple" size="4" style="margin: 0px; width: 340px;">
+            </select>
+    </div>
+    </body>
+</html>  

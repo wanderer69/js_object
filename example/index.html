@@ -1,0 +1,231 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .hoverTable {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .hoverTable td {
+      padding: 7px;
+      border: #4e95f4 1px solid;
+    }
+
+    /* Define the default color for all the table rows */
+    .hoverTable tr {
+      background: #b8d1f3;
+    }
+
+    /* Define the hover highlight color for the table row */
+    .hoverTable tbody tr:hover {
+      background-color: #ffff99;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="DocConstructor" class="DocConstructor" style="display:none">
+    {
+    "doc_constructors": [
+    {
+    "object": {
+    "object_id": "label_1",
+    "object_type": "label",
+    "object_extender": {
+    "click_callback": "LabelClickCallBack"
+    }
+    }
+    },
+    {
+    "object": {
+    "object_id": "block_1",
+    "object_type": "block",
+    "object_extender": {
+    "change_callback": "BlockChangeCallBack",
+    "click_callback": "BlockClickCallBack"
+    }
+    }
+    },
+    {
+    "object": {
+    "object_id": "text_1",
+    "object_type": "text",
+    "object_extender": {
+    "text_by_default": "text_by_default",
+    "change_callback": "TextChangeCallBack"
+    }
+    }
+    },
+    {
+    "object": {
+    "object_id": "button_1",
+    "object_type": "button",
+    "object_extender": {
+    "button_name": "button_name_1",
+    "click_callback": "ButtonClickCallBack"
+    }
+    }
+    },
+    {
+    "object": {
+    "object_id": "list_1",
+    "object_type": "list",
+    "object_extender": {
+    "list_items": [
+    {
+    "id": "Item1",
+    "data": "data item1"
+    },
+    {
+    "id": "Item2",
+    "data": "data item2"
+    },
+    {
+    "id": "Item3",
+    "data": "data item3"
+    }
+    ],
+    "change_callback": "ListChangeCallBack"
+    }
+    }
+    },
+    {
+    "object": {
+    "object_id": "selector_1",
+    "object_type": "selector",
+    "object_extender": {
+    "change_callback": "SelectorChangeCallBack"
+    }
+    }
+    },
+    {
+    "object": {
+    "object_id": "table_1",
+    "object_type": "table",
+    "object_extender": {
+    "row_click_callback": "TableRowClickCallBack"
+    }
+    }
+    },
+    {
+    "object": {
+    "object_id": "tree_1",
+    "object_type": "tree",
+    "object_extender": {
+    "tree_items": [
+    {
+    "data": "cell1",
+    "tree_items": [
+    {
+    "data": "cell11",
+    "tree_items": [
+    ]
+    },
+    {
+    "data": "cell12",
+    "tree_items": [
+    {
+    "data": "cell121",
+    "tree_items": [
+    ]
+    }
+    ]
+    }
+    ]
+    },
+    {
+    "data": "cell2",
+    "tree_items": [
+    {
+    "data": "cell21",
+    "tree_items": [
+    {
+    "data": "cell211",
+    "tree_items": [
+    ]
+    }
+    ]
+    },
+    {
+    "data": "cell22",
+    "tree_items": [
+    {
+    "data": "cell221",
+    "tree_items": [
+    ]
+    }
+
+    ]
+    }
+    ]
+    }
+    ],
+    "change_callback": "TreeChangeCallBack",
+    "click_callback": "TreeClickCallBack"
+    }
+    }
+    }
+    ]
+    }
+  </div>
+  <div id="label_1_">
+    <label id="label_1"> </label>
+  </div>
+  <br>
+  <br>
+  <div id="block_1">
+
+  </div>
+  <br>
+  <br>
+  <div id="text_1_">
+    Пароль <input id="text_1" type="text" size="40">
+  </div>
+  <div id="button_1_">
+    <button id="button_1">button_name_1</button>
+  </div>
+  <br>
+  <br>
+  <div class="custom-select-wrapper">
+    <div class="custom-select">
+      <div class="custom-options" id="list_1">
+      </div>
+    </div>
+  </div>
+  <br>
+  <br>
+  <br>
+  <br>
+  <br>
+  <div id="selector_1_">
+    <select id="selector_1" name="words" multiple="multiple" size="4" style="margin: 0px; width: 340px;">
+    </select>
+  </div>
+  <br>
+  <br>
+  <br>
+  <br>
+  <!-- class="table-clickable" -->
+  <div id="table_1_" class="container">
+    <table id="table_1" class="hoverTable"></table>
+  </div>
+  <br>
+  <br>
+  <div id="tree_1">
+  </div>
+
+  <script src="wasm_exec.js"></script>
+  <script>
+    const go = new Go();
+    WebAssembly.instantiateStreaming(fetch("json_3.wasm"), go.importObject).then((result) => {
+      go.run(result.instance);
+    });
+  </script>
+
+</body>
+
+</html>
