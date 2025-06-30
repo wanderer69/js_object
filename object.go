@@ -16,6 +16,8 @@ type JSObject struct {
 	Childs         []*JSObject `json:"childs_list"`
 	Parent         *JSObject   `json:"parent_object"`
 	Header         *JSObject   `json:"header_object"`
+
+	eventHandlersByName map[string]js.Func
 }
 
 func GetObjectByName(doc *DocObject, id string) js.Value {
@@ -37,14 +39,15 @@ func NewJSObject(doc *DocObject, id string, oType string, oe interface{}) *JSObj
 	parent := &JSObject{}
 
 	jso := JSObject{
-		Object:         obj,
-		ObjectData:     obj,
-		ObjectID:       id,
-		ObjectType:     oType,
-		Document:       doc,
-		ObjectExtender: oe,
-		Childs:         childs,
-		Parent:         parent,
+		Object:              obj,
+		ObjectData:          obj,
+		ObjectID:            id,
+		ObjectType:          oType,
+		Document:            doc,
+		ObjectExtender:      oe,
+		Childs:              childs,
+		Parent:              parent,
+		eventHandlersByName: make(map[string]js.Func),
 	}
 	return &jso
 }
@@ -186,9 +189,16 @@ func (jso *JSObject) SetList(cb reflect.Value) *JSObject {
 
 	poslValue := jso.Document.Object.Call("querySelectorAll", ".custom-option")
 	posL := DOMObjectToList(poslValue)
+
 	for i := range posL {
 		spanItem := posL[i]
-		spanItem.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		fn := jso.eventHandlersByName[l.ChangeCBName+fmt.Sprintf("%d", i)]
+		spanItem.Call("removeEventListener", "click", fn, false)
+	}
+	jso.eventHandlersByName = make(map[string]js.Func)
+	for i := range posL {
+		spanItem := posL[i]
+		fn := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			pn := this.Get("parentNode")
 			ol := pn.Call("querySelector", ".custom-option.selected")
 			if !ol.IsNull() {
@@ -201,12 +211,14 @@ func (jso *JSObject) SetList(cb reflect.Value) *JSObject {
 			if li.OnClick != nil {
 				li.OnClick(this, args, l)
 			}
-			fmt.Printf("--> %v this %v args %v\r\n", cb, this, args)
+			// fmt.Printf("--> %v this %v args %v\r\n", cb, this, args)
 			v := js.ValueOf(i)
 			args = append(args, v)
 			InvokeCall(cb, this, args, jso)
 			return js.Null()
-		}), false)
+		})
+		spanItem.Call("addEventListener", "click", fn, false)
+		jso.eventHandlersByName[l.ChangeCBName+fmt.Sprintf("%d", i)] = fn
 	}
 
 	return jso
@@ -217,12 +229,12 @@ func (jso *JSObject) UpdateList(dd interface{}, listID []string, listData []stri
 	l := jso.ObjectExtender.(List)
 
 	l.ListIDDict = make(map[string]ListItem)
-	tags_lst := []string{}
+	//	tags_lst := []string{}
 	for i, item := range listID {
 		li := ListItem{}
 		li.ID = item
 		li.Data = listData[i]
-		tags_lst = append(tags_lst, fmt.Sprintf("<span class=\"custom-option\">%v</span><br>", item))
+		//		tags_lst = append(tags_lst, fmt.Sprintf("<span class=\"custom-option\">%v</span><br>", item))
 		l.ListItems = append(l.ListItems, li)
 		l.ListIDDict[item] = li
 	}
@@ -285,21 +297,35 @@ func (jso *JSObject) SetTable(dd interface{}, tableID []string, tableData [][]st
 		bf, f := Invoke(dd, t.ChangeCBName)
 		if bf {
 			t.ChangeCB = f
-			jso.Object.Call("addEventListener", "change", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			fn := jso.eventHandlersByName[t.ChangeCBName]
+			jso.Object.Call("removeEventListener", "click", fn, false)
+
+			fn = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 				InvokeCall(t.ChangeCB, this, args, jso)
 				return js.Null()
-			}), false)
+			})
+			jso.Object.Call("addEventListener", "change", fn, false)
 		}
 		bf, f = Invoke(dd, t.ClickCBName)
 		if bf {
 			t.ClickCB = f
-			jso.Object.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			fn := jso.eventHandlersByName[t.ChangeCBName]
+			jso.Object.Call("removeEventListener", "click", fn, false)
+			fn = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 				InvokeCall(t.ClickCB, this, args, jso)
 				return js.Null()
-			}), false)
+			})
+			jso.Object.Call("addEventListener", "click", fn, false)
 		}
 
 		bf, f = Invoke(dd, t.RowClickCBName)
+		for i := range jso.Childs {
+			childItem := jso.Childs[i]
+			fn := jso.eventHandlersByName[t.RowClickCBName+fmt.Sprintf("%d", i)]
+			childItem.Object.Call("removeEventListener", "click", fn, false)
+		}
+		jso.eventHandlersByName = make(map[string]js.Func)
+
 		for i := range jso.Childs {
 			if bf {
 				t.RowClickCB = f
@@ -325,58 +351,70 @@ func BindCallBack(dd interface{}, jsoa []*JSObject, at interface{}) {
 			bf, f := Invoke(dd, b.ChangeCBName)
 			if bf {
 				b.ChangeCB = f
-				jso.Object.Call("addEventListener", "change", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				fn := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 					InvokeCall(b.ChangeCB, this, args, jso, at)
 					return js.Null()
-				}), false)
+				})
+				jso.Object.Call("addEventListener", "change", fn, false)
+				jso.eventHandlersByName[b.ChangeCBName] = fn
 			}
 			bf, f = Invoke(dd, b.ClickCBName)
 			if bf {
 				b.ClickCB = f
-				jso.Object.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				fn := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 					InvokeCall(b.ClickCB, this, args, jso, at)
 					return js.Null()
-				}), false)
+				})
+				jso.Object.Call("addEventListener", "click", fn, false)
+				jso.eventHandlersByName[b.ClickCBName] = fn
 			}
 		case "text":
 			t := jso.ObjectExtender.(Text)
 			bf, f := Invoke(dd, t.ChangeCBName)
 			if bf {
 				t.ChangeCB = f
-				jso.Object.Call("addEventListener", "change", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				fn := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 					InvokeCall(t.ChangeCB, this, args, jso)
 					return js.Null()
-				}), false)
+				})
+				jso.Object.Call("addEventListener", "change", fn, false)
+				jso.eventHandlersByName[t.ChangeCBName] = fn
 			}
 		case "button":
 			b := jso.ObjectExtender.(Button)
 			bf, f := Invoke(dd, b.ClickCBName)
 			if bf {
 				b.ClickCB = f
-				jso.Object.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				fn := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 					InvokeCall(b.ClickCB, this, args, jso /*, at*/)
 					return js.Null()
-				}), false)
+				})
+				jso.Object.Call("addEventListener", "click", fn, false)
+				jso.eventHandlersByName[b.ClickCBName] = fn
 			}
 		case "image":
 			im := jso.ObjectExtender.(Image)
 			bf, f := Invoke(dd, im.ClickCBName)
 			if bf {
 				im.ClickCB = f
-				jso.Object.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				fn := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 					InvokeCall(im.ClickCB, this, args, jso, at)
 					return js.Null()
-				}), false)
+				})
+				jso.Object.Call("addEventListener", "click", fn, false)
+				jso.eventHandlersByName[im.ClickCBName] = fn
 			}
 		case "label":
 			lb := jso.ObjectExtender.(Label)
 			bf, f := Invoke(dd, lb.ClickCBName)
 			if bf {
 				lb.ClickCB = f
-				jso.Object.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				fn := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 					InvokeCall(lb.ClickCB, this, args, jso, at)
 					return js.Null()
-				}), false)
+				})
+				jso.Object.Call("addEventListener", "click", fn, false)
+				jso.eventHandlersByName[lb.ClickCBName] = fn
 			}
 		case "list":
 			l := jso.ObjectExtender.(List)
@@ -390,28 +428,34 @@ func BindCallBack(dd interface{}, jsoa []*JSObject, at interface{}) {
 			bf, f := Invoke(dd, b.ChangeCBName)
 			if bf {
 				b.ChangeCB = f
-				jso.Object.Call("addEventListener", "change", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				fn := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 					InvokeCall(b.ChangeCB, this, args, jso)
 					return js.Null()
-				}), false)
+				})
+				jso.Object.Call("addEventListener", "change", fn, false)
+				jso.eventHandlersByName[b.ChangeCBName] = fn
 			}
 		case "table":
 			b := jso.ObjectExtender.(Table)
 			bf, f := Invoke(dd, b.ChangeCBName)
 			if bf {
 				b.ChangeCB = f
-				jso.Object.Call("addEventListener", "change", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				fn := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 					InvokeCall(b.ChangeCB, this, args, jso)
 					return js.Null()
-				}), false)
+				})
+				jso.Object.Call("addEventListener", "change", fn, false)
+				jso.eventHandlersByName[b.ChangeCBName] = fn
 			}
 			bf, f = Invoke(dd, b.ClickCBName)
 			if bf {
 				b.ClickCB = f
-				jso.Object.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				fn := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 					InvokeCall(b.ClickCB, this, args, jso)
 					return js.Null()
-				}), false)
+				})
+				jso.Object.Call("addEventListener", "click", fn, false)
+				jso.eventHandlersByName[b.ClickCBName] = fn
 			}
 
 			bf, f = Invoke(dd, b.RowClickCBName)
@@ -419,10 +463,12 @@ func BindCallBack(dd interface{}, jsoa []*JSObject, at interface{}) {
 				if bf {
 					b.RowClickCB = f
 					rowObj := jso.Childs[i]
-					rowObj.Object.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+					fn := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 						InvokeCall(b.RowClickCB, this, args, rowObj)
 						return js.Null()
-					}), false)
+					})
+					rowObj.Object.Call("addEventListener", "click", fn, false)
+					jso.eventHandlersByName[b.RowClickCBName+fmt.Sprintf("%d", i)] = fn
 				}
 			}
 
@@ -432,30 +478,37 @@ func BindCallBack(dd interface{}, jsoa []*JSObject, at interface{}) {
 			bf, f := Invoke(dd, b.ChangeCBName)
 			if bf {
 				b.ChangeCB = f
-				jso.Object.Call("addEventListener", "change", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				fn := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 					InvokeCall(b.ChangeCB, this, args, jso)
 					return js.Null()
-				}), false)
+				})
+				jso.Object.Call("addEventListener", "change", fn, false)
+				jso.eventHandlersByName[b.ChangeCBName] = fn
 			}
 			bf, f = Invoke(dd, b.ClickCBName)
 			if bf {
 				b.ClickCB = f
-				jso.Object.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+				fn := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 					InvokeCall(b.ClickCB, this, args, jso)
 					return js.Null()
-				}), false)
+				})
+				jso.Object.Call("addEventListener", "click", fn, false)
+				jso.eventHandlersByName[b.ClickCBName] = fn
+
 				class_id := "class_" + jso.ObjectID
 				lst := jso.Document.Object.Call("getElementsByClassName", class_id)
 				lst_len := lst.Length()
 
 				for i := 0; i < lst_len; i++ {
 					//fmt.Printf("%v %v\r\n", i, lst.Index(i))
-					jso.Object.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+					fn := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 						pe := this.Get("parentElement")
 						pe.Call("querySelector", ".nested").Get("classList").Call("toggle", "active")
 						this.Get("classList").Call("toggle", "check-box")
 						return js.Null()
-					}), false)
+					})
+					jso.Object.Call("addEventListener", "click", fn, false)
+					jso.eventHandlersByName[b.ClickCBName+fmt.Sprintf("%d", i)] = fn
 				}
 			}
 		}
